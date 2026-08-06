@@ -6,6 +6,63 @@ import styles from "./Wardrobe.module.css";
 
 const CATEGORIES = ["Alle", "Oberteil", "Hose", "Kleid", "Schuhe", "Accessoire"];
 
+function AuthImage({ src, alt }) {
+  const { token } = useAuth();
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!src) {
+      setFailed(true);
+      return;
+    }
+
+    const headers = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    fetch(`${api.BASE_URL}${src}`, { headers })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed");
+        return res.blob();
+      })
+      .then((blob) => {
+        if (!cancelled) {
+          const url = URL.createObjectURL(blob);
+          setBlobUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return url;
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [src, token]);
+
+  useEffect(() => {
+    return () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, []);
+
+  if (failed) {
+    return (
+      <div className={styles.cardImagePlaceholder}>
+        {alt?.[0] || "?"}
+      </div>
+    );
+  }
+  if (!blobUrl) {
+    return <div className={styles.cardImageSkeleton} />;
+  }
+  return <img src={blobUrl} alt={alt} />;
+}
+
 export default function Wardrobe() {
   const { isAuthenticated } = useAuth();
   const [items, setItems] = useState([]);
@@ -171,11 +228,6 @@ export default function Wardrobe() {
     } finally {
       setDeleting(false);
     }
-  }
-
-  function imageUrl(item) {
-    if (item.image_url.startsWith("http")) return item.image_url;
-    return `${api.BASE_URL}${item.image_url}`;
   }
 
   if (!isAuthenticated) {
@@ -346,7 +398,7 @@ export default function Wardrobe() {
             {items.map((item) => (
               <div key={item.id} className={styles.card}>
                 <div className={styles.cardImage}>
-                  <img src={imageUrl(item)} alt={item.name} />
+                  <AuthImage src={item.image_url} alt={item.name} />
                 </div>
                 <div className={styles.cardBody}>
                   <h3 className={styles.cardName}>{item.name}</h3>
