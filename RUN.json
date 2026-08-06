@@ -6,11 +6,69 @@
       "dir": "frontend",
       "stack": "web-vite",
       "kind": "server",
-      "install": [["npm", "ci"]],
-      "start": ["node", "./node_modules/vite/bin/vite.js"],
+      "install": [
+        [
+          "npm",
+          "ci"
+        ]
+      ],
+      "start": [
+        "node",
+        "./node_modules/vite/bin/vite.js"
+      ],
       "port": 5173,
       "port_env": "PORT",
-      "health": { "path": "/", "expect_status": [200] }
+      "health": {
+        "path": "/",
+        "expect_status": [
+          200
+        ]
+      }
+    },
+    {
+      "name": "api",
+      "dir": "backend",
+      "stack": "python",
+      "kind": "server",
+      "install": [
+        [
+          "${python}",
+          "-m",
+          "pip",
+          "install",
+          "-q",
+          "-r",
+          "requirements.txt"
+        ]
+      ],
+      "start": [
+        "${python}",
+        "-m",
+        "uvicorn",
+        "main:app",
+        "--port",
+        "${PORT}"
+      ],
+      "port": 8000,
+      "port_env": "PORT",
+      "health": {
+        "path": "/api/health",
+        "expect_status": [
+          200
+        ]
+      },
+      "env": {
+        "DATABASE_URL": {
+          "dev": "sqlite:///./wardrobe.db"
+        },
+        "JWT_SECRET": {
+          "generate": "hex",
+          "bytes": 32
+        },
+        "FRONTEND_ORIGIN": {
+          "dev": "http://localhost:5173"
+        }
+      }
     }
   ]
 }
