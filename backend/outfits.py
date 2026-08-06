@@ -1,25 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from auth import get_current_user as _auth_get_current_user
 from database import get_db
-from models import ClothingItem, Outfit, OutfitItem, User
+from models import ClothingItem, Outfit, OutfitItem
 from schemas.outfits import OutfitCreate, OutfitItemResponse, OutfitResponse
 
 router = APIRouter(prefix="/api/outfits")
 
 
-def _get_current_user(request: Request, db=Depends(get_db)):
-    from auth import get_current_user
-
-    return get_current_user(request, db)
-
-
 @router.post("", status_code=201, response_model=OutfitResponse)
 def create_outfit(
     data: OutfitCreate,
+    request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(_get_current_user),
 ):
+    current_user = _auth_get_current_user(request, db)
+
     if not data.item_ids:
         raise HTTPException(status_code=400, detail="At least one item is required")
 
@@ -66,9 +63,11 @@ def create_outfit(
 
 @router.get("", response_model=list[OutfitResponse])
 def list_outfits(
+    request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(_get_current_user),
 ):
+    current_user = _auth_get_current_user(request, db)
+
     outfits = db.query(Outfit).filter(Outfit.user_id == current_user.id).all()
 
     result: list[OutfitResponse] = []
@@ -101,9 +100,11 @@ def list_outfits(
 @router.delete("/{outfit_id}", status_code=204)
 def delete_outfit(
     outfit_id: int,
+    request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(_get_current_user),
 ):
+    current_user = _auth_get_current_user(request, db)
+
     outfit = db.query(Outfit).filter(Outfit.id == outfit_id).first()
 
     if not outfit:

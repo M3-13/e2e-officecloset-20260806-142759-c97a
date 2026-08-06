@@ -2,23 +2,23 @@ import pytest
 
 from database import SessionLocal
 from models import ClothingItem, Outfit, OutfitItem, User
-from outfits import _get_current_user
 
 
 class _TestUser:
-    def __init__(self, id: int):
+    def __init__(self, id: int, email: str = "test@local"):
         self.id = id
+        self.email = email
 
 
-def _make_override(user_id: int):
-    def override():
+def _make_mock_auth(user_id: int):
+    def mock_auth(request, db):
         return _TestUser(user_id)
 
-    return override
+    return mock_auth
 
 
 @pytest.fixture
-def own_user(client):
+def own_user(client, monkeypatch):
     db = SessionLocal()
     user = User(email="outfits_own@test.local", hashed_password="x")
     db.add(user)
@@ -26,7 +26,7 @@ def own_user(client):
     db.refresh(user)
     db.close()
 
-    client.app.dependency_overrides[_get_current_user] = _make_override(user.id)
+    monkeypatch.setattr("outfits._auth_get_current_user", _make_mock_auth(user.id))
 
     yield user
 
@@ -37,7 +37,6 @@ def own_user(client):
     db.query(User).filter(User.id == user.id).delete()
     db.commit()
     db.close()
-    client.app.dependency_overrides.clear()
 
 
 @pytest.fixture
