@@ -49,7 +49,7 @@
         "--port",
         "${PORT}"
       ],
-      "port": 8000,
+      "port": 8080,
       "port_env": "PORT",
       "health": {
         "path": "/api/health",
